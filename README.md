@@ -17,7 +17,7 @@ To use ReconSphere, you can follow these steps:
 1. Clone the repository:
 
    ```
-   git clone https://github.com/yourusername/ReconSphere.git
+   git clone https://github.com/Paresh-Maheshwari/ReconSphere
    ```
 2. Navigate to the project directory:
 
@@ -60,10 +60,6 @@ python ReconSphere.py example.com -o output.txt -s
 ReconSphere will fetch subdomains and provide a table with the following information:
 
 ![image](https://github.com/Paresh-Maheshwari/ReconSphere/assets/70533309/ab529880-fb6d-48a5-a791-22af7c446cad)
-
-
-
-
 
 
 
