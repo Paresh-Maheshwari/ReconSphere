@@ -59,7 +59,8 @@ python ReconSphere.py example.com -o output.txt -s
 ## Results
 ReconSphere will fetch subdomains and provide a table with the following information:
 
-![image](https://github.com/Paresh-Maheshwari/ReconSphere/assets/70533309/18520944-1838-403c-a0da-e5f3de7a98e2)
+![image](https://github.com/Paresh-Maheshwari/ReconSphere/assets/70533309/ab529880-fb6d-48a5-a791-22af7c446cad)
+
 
 
 
