@@ -1,13 +1,14 @@
 
 # ReconSphere - OSINT Subdomain Enumeration Tool
 
-ReconSphere is an open-source intelligence (OSINT) tool for subdomain enumeration. It fetches subdomains from various sources and provides information such as IP addresses and status codes for each subdomain.
+ReconSphere is an open-source intelligence (OSINT) tool for subdomain enumeration. It fetches subdomains from various sources and provides information such as IP addresses and status codes for each subdomain. It also supports brute-force subdomain enumeration.
 
 ## Features
 
 - Fetch subdomains from multiple sources.
 - Resolve and display IP addresses for subdomains.
 - Display HTTP status codes for subdomains.
+- Brute-force subdomain enumeration.
 - Option to save results to an output file.
 
 ## Usage
@@ -33,27 +34,50 @@ To use ReconSphere, you can follow these steps:
 4. Run ReconSphere with the desired options. You can provide the target domain and specify additional options.
 
     ``` 
-    python ReconSphere.py <target_domain> [-o <output_file>] [-s] [-ip]
+    python ReconSphere.py <target_domain> [-o <output_file>] [other options]
 
-    <target_domain>: The target domain for subdomain enumeration.
-    
-    -o <output_file>: (Optional) Specify an output file to save the results.
-    
-    -s or --status-code: (Optional) Display HTTP status codes for subdomains.
-    
-    -ip or --ip: (Optional) Display IP addresses for subdomains.
+      <target_domain>: The target domain for subdomain enumeration.
+      -o <output_file>: (Optional) Specify an output file to save the results.
+      -h or --help: (Optional) Display help message and exit.
+
+    Osint Enumeration Options:
+      -osint or --osint: (Optional) Run OSINT subdomain enumeration.
+      -s or --status-code: (Optional) Display HTTP status codes for subdomains.
+      -ip or --ip: (Optional) Display IP addresses for subdomains.
+
+    Brute-force Enumeration Options:
+     -bf or --bruteforce: (Optional) Run subdomain brute-force enumeration.
+     -w <wordlist>: (Optional) Specify the path to the wordlist file for brute-force enumeration.
+
+      
     ```
 ## Examples
-Enumerate subdomains for a domain without displaying IP addresses or status codes:
-
-
-```
-python ReconSphere.py example.com
-```
-Enumerate subdomains, display status codes, and save results to an output file:
+### OSINT Subdomain Enumeration 
+1. Enumerate subdomains for a domain without displaying IP addresses or status codes:
 
 ```
-python ReconSphere.py example.com -o output.txt -s
+python ReconSphere.py -d example.com --osint 
+```
+
+2. Enumerate subdomains, display status codes, and save results to an output file:
+
+```
+python ReconSphere.py -d example.com -osint -o output.txt -s
+```
+
+
+3. Enumerate subdomains, display status codes, ip address and save results to an output file:
+
+```
+python ReconSphere.py -d example.com  -s -ip
+```
+
+### Brute-force Subdomain Enumeration
+
+1. Run brute-force subdomain enumeration using a wordlist file:
+    
+```
+python ReconSphere.py -d example.com -w wordlist.txt -bf
 ```
 
 ## Results

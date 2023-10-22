@@ -5,7 +5,9 @@ import re
 import argparse
 import concurrent.futures
 import time
-
+import contextlib
+import sys
+from tqdm import tqdm
 from colorama import Fore, Style
 
 # Function to print colored text
@@ -13,7 +15,7 @@ def colored_print(text, color):
     print(f"{color}{text}{Style.RESET_ALL}")
 
 # ASCII art with colored text and your name
-ascii_art = f"""
+banner = f"""
 {Fore.RED}██████  {Fore.GREEN}██████  ██████  {Fore.YELLOW}████████ {Fore.CYAN}███    ██ {Fore.MAGENTA}███████ {Fore.BLUE}██████  ██   ██ ███████ {Fore.RED}██████  {Fore.GREEN}███████ 
 {Fore.RED}██   ██ {Fore.GREEN}██      ██      {Fore.YELLOW}██    ██ {Fore.CYAN}████   ██ {Fore.MAGENTA}██      {Fore.BLUE}██   ██ ██   ██ ██      {Fore.RED}██   ██ {Fore.GREEN}██      
 {Fore.RED}██████  {Fore.GREEN}█████   ██      {Fore.YELLOW}██    ██ {Fore.CYAN}██ ██  ██ {Fore.MAGENTA}███████ {Fore.BLUE}██████  ███████ █████   {Fore.RED}██████  {Fore.GREEN}█████   
@@ -24,14 +26,10 @@ ascii_art = f"""
 """
 
 # Print the colored ASCII art
-print(ascii_art)
+print(banner)
 
 
-# ANSI escape codes for text color
-GREEN = '\033[92m'
-RED = '\033[91m'
-RESET = '\033[0m'
-CYAN = '\033[96m'
+
 # Function to resolve IP addresses for subdomains
 def resolve_subdomain_ips(subdomain):
     try:
@@ -86,16 +84,17 @@ def fetch_subdomains_from_sources(domain):
 # Main function for OSINT
 def osint(domain, output_file=None, display_status_code=False, display_ip=False):
     start_time = time.time()
-    print("ReconSphere - Fetching subdomains. Please wait...\n")
+    print(
+        f"{Fore.GREEN}ReconSphere - Fetching subdomains. Please wait...{Style.RESET_ALL}"
+    )
 
     subdomains = fetch_subdomains_from_sources(domain)
-    
 
-    subdomain_status = {}
+    # Initialize a dictionary to keep track of status code counts
     status_counts = {}
 
     def check_subdomain_status(subdomain):
-    
+
         url = f"http://{subdomain}"
         try:
             response = requests.head(url)
@@ -112,35 +111,37 @@ def osint(domain, output_file=None, display_status_code=False, display_ip=False)
             status_counts[status_code] = 1
 
         return status_code
-        
+
     # Initialize a variable to keep track of the index
     index = 0
 
 
     if display_status_code and display_ip:
-        header = f"\n|{'No.':<4} |{'Subdomain':<40}||{'Status Code':<10}|            |{'IP Address':<20}|"
+        header = f"\n|{'No.':<4}|{'Subdomain':<40}|{'Status Code':<10}         |{'IP Address':<20}"
     elif display_status_code:
-        header = f"\n|{'No.':<4}  |{'Subdomain':<40}|{'Status Code'}|"
+        header = f"\n|{'No.':<4}  |{'Subdomain':<40}|Status Code|"
     elif display_ip:
-        header = f"\n|{'No.':<4}  |{'Subdomain':<40}|{'IP Address'}|"
+        header = f"\n|{'No.':<4}  |{'Subdomain':<40}|IP Address|"
     else:
         header = f"\n|{'No.':<4}  |{'Subdomain':<40}|"
 
     # Print the header with green text
-    print(GREEN + header + RESET)
+    # Print the header with green text
+    print(Fore.GREEN + header + Style.RESET_ALL)
 
     for subdomain in subdomains:
         index += 1
 
         output_line = f"|{index:<4}  {subdomain:<40}"
-        
+
         if display_status_code:
             status_code = check_subdomain_status(subdomain)
             # Display status code in red if it's an error
             if status_code == 'Error':
-                output_line += RED + f"{status_code:<20}" + RESET
+                output_line += f"{Fore.RED}{status_code:<20}{Style.RESET_ALL}"
             else:
                 output_line += f"{status_code:<20}"
+
         if display_ip:
             ips = resolve_subdomain_ips(subdomain)
             output_line += f"|{''.join(ips):<20}"
@@ -148,22 +149,28 @@ def osint(domain, output_file=None, display_status_code=False, display_ip=False)
         print(output_line)
 
 
-        
-    
+
+
 
     end_time = time.time()
     time_elapsed = end_time - start_time
 
     # Print the time elapsed and total subdomains found with color
-    print(f"\n{GREEN}Time elapsed: {time_elapsed:.2f} seconds{RESET}\n")
+    print(
+        f"{Fore.GREEN}Time elapsed: {time_elapsed:.2f} seconds{Style.RESET_ALL}"
+        + "\n"
+    )
     print("-" * 60)
-    print(f"{GREEN}Total subdomains found: {len(subdomains)}{RESET}\n")
+    print(
+        f"{Fore.GREEN}Total subdomains found: {len(subdomains)}{Style.RESET_ALL}"
+        + "\n"
+    )
 
     if display_status_code:
         # Print the status code counts with color
-        print(f"{CYAN}Status Code Counts:{RESET}")
+        print(f"{Fore.CYAN}Status Code Counts:{Style.RESET_ALL}")
         for code, count in status_counts.items():
-            print(f"{CYAN}{code:<10}{count}{RESET}")
+            print(f"{Fore.CYAN}{code:<10}{count}{Style.RESET_ALL}")
 
 
     if output_file:
@@ -171,18 +178,95 @@ def osint(domain, output_file=None, display_status_code=False, display_ip=False)
         with open(output_file, 'a') as f:
             f.write(f'{result_line}\n')
 
+
+
+
+# List to store found subdomains
+found_subdomains = []
+
+# Function to check if a subdomain exists in either HTTP or HTTPS
+def check_subdomain(target_domain, subdomain):
+    protocols = ["http", "https"]
+    for protocol in protocols:
+        url = f"{protocol}://{subdomain}.{target_domain}"
+        with contextlib.suppress(requests.exceptions.RequestException):
+            response = requests.get(url)
+            if response.status_code == 200:
+                found_subdomains.append(f"{subdomain}.{target_domain}")
+                sys.stdout.write("\r{}    ".format("\n".join(found_subdomains)))
+                sys.stdout.flush()
+                if protocol == "http":
+                    break  # If HTTP is successful, no need to check HTTPS
+
+def brute_force_subdomains(target_domain, wordlist_file, output_file):
+    common_subdomains = []
+
+    try:
+        with open(wordlist_file, "r") as file:
+            common_subdomains = [line.strip() for line in file.readlines()]
+    except FileNotFoundError as e:
+        print(f"Error: Wordlist file '{wordlist_file}' not found.")
+        return
+
+    total_words = len(common_subdomains)
+
+    # Use multithreading for parallel processing
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(check_subdomain, target_domain, subdomain) for subdomain in common_subdomains]
+
+        with tqdm(total=total_words, position=0, desc="Bruteforcing") as pbar:
+            for _ in concurrent.futures.as_completed(futures):
+                pbar.update(1)
+
+    # Save found subdomains to the specified output file
+    with open(output_file, "w") as output_file:
+        for subdomain in found_subdomains:
+            output_file.write(subdomain + "\n")
+
+
+
+
+
 if __name__ == "__main__":
-    print("ReconSphere - OSINT Subdomain Enumeration Tool")
-    print("Author: @Paresh-Maheshwari")
-    print("GitHub: https://github.com/Paresh-Maheshwari\n")
+    print(
+        f"{Fore.RED}ReconSphere - OSINT Subdomain Enumeration Tool{Style.RESET_ALL}"
+    )
+    print(f"{Fore.YELLOW}Author: @Paresh-Maheshwari{Style.RESET_ALL}")
+    print(Fore.CYAN + "GitHub: https://github.com/Paresh-Maheshwari\n" + Style.RESET_ALL)
 
     parser = argparse.ArgumentParser(description="ReconSphere - OSINT Subdomain Enumeration Tool")
-    parser.add_argument("domain", type=str, help="The target domain for subdomain enumeration")
+    parser.add_argument("-d", "--domain", type=str, help="The target domain for subdomain enumeration")
     parser.add_argument("-o", "--output-file", type=str, help="Output file for subdomains")
     parser.add_argument("-s", "--status-code", action="store_true", help="Display status codes")
     parser.add_argument("-ip", "--ip", action="store_true", help="Display IP addresses")
-    args = parser.parse_args()
+    parser.add_argument("-w", "--wordlist", help="Path to the wordlist file")
+    parser.add_argument("-osint", action="store_true", help="Run OSINT subdomain enumeration")
+    parser.add_argument("-bf", "--bruteforce", action="store_true", help="Run subdomain brute-force enumeration")
+    args, unknown = parser.parse_known_args()
 
-    
-
-    osint(args.domain, args.output_file, args.status_code, args.ip)
+    if unknown:
+        print(
+            f"{Fore.RED}Unrecognized arguments: {', '.join(unknown)}{Style.RESET_ALL}"
+        )
+    elif args.osint:
+        osint(args.domain, args.output_file, args.status_code, args.ip)
+    elif args.bruteforce:
+        if args.wordlist is None:
+            print(
+                f"{Fore.RED}Please provide a wordlist using the -w option for brute-force enumeration.{Style.RESET_ALL}"
+            )
+        else:
+            brute_force_subdomains(args.domain, args.wordlist, args.output_file)
+    else:
+        # Display available commands when no arguments are provided
+        print(
+            f"{Fore.YELLOW}Usage: python ReconSphere.py -d <target_domain> [other options]{Style.RESET_ALL}"
+        )
+        print(f"{Fore.YELLOW}Available Commands:{Style.RESET_ALL}")
+        print(
+            f"{Fore.YELLOW}     -osint: Run OSINT subdomain enumeration{Style.RESET_ALL}"
+        )
+        print(
+            f"{Fore.YELLOW}     -bf/--bruteforce: Run subdomain brute-force enumeration{Style.RESET_ALL}"
+        )
+        print("\nUse -h or --help for more information on specific commands.")
